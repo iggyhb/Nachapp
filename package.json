@@ -1,0 +1,47 @@
+{
+  "name": "personal-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "db:push": "drizzle-kit push:pg",
+    "db:migrate": "node -r ts-node/register src/lib/db/migrate.ts",
+    "test": "vitest",
+    "test:watch": "vitest --watch"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "@neondatabase/serverless": "^0.9.2",
+    "@serwist/next": "^9.0.0",
+    "@simplewebauthn/browser": "^10.0.0",
+    "@simplewebauthn/server": "^10.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "drizzle-orm": "^0.30.10",
+    "jose": "^5.4.1",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.344.0",
+    "next": "^14.1.0",
+    "openai": "^4.52.0",
+    "pdf-parse": "^1.1.1",
+    "postcss": "^8.4.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "drizzle-kit": "^0.20.14",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  }
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563eb" />
+    <title>Sin conexión - Mi App Personal</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+          'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+          'Helvetica Neue', sans-serif;
+        background: #ffffff;
+        color: #1f2937;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #111827;
+          color: #f3f4f6;
+        }
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .icon {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+      }
+
+      h1 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        font-size: 1rem;
+        color: #6b7280;
+        margin-bottom: 2rem;
+        max-width: 400px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        p {
+          color: #9ca3af;
+        }
+      }
+
+      button {
+        padding: 0.75rem 1.5rem;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      button:hover {
+        background: #1d4ed8;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .status {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: #f3f4f6;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .status {
+          background: #1f2937;
+          color: #9ca3af;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <svg
+        class="icon pulse"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M8.111 16.5a2.5 2.5 0 0 1-2.5-2.5m0 0a2.5 2.5 0 0 0 2.5-2.5m-2.5 2.5h11.778a2.5 2.5 0 0 0 2.5 2.5m0 0a2.5 2.5 0 0 1-2.5 2.5m0-10a2.5 2.5 0 0 1 2.5-2.5m0 0a2.5 2.5 0 0 0-2.5-2.5m0 0h-11.778a2.5 2.5 0 0 0-2.5 2.5m0 0a2.5 2.5 0 0 1 2.5-2.5"
+        ></path>
+      </svg>
+
+      <h1>Sin conexión</h1>
+      <p>No hay conexión a internet. Por favor verifica tu conexión e intenta de nuevo.</p>
+
+      <button onclick="window.location.reload()">Reintentar</button>
+
+      <div class="status">
+        <p id="status">Esperando conexión...</p>
+      </div>
+    </div>
+
+    <script>
+      function updateStatus() {
+        const statusEl = document.getElementById('status');
+        if (navigator.onLine) {
+          statusEl.textContent = 'Conexión restaurada. Recargando...';
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          statusEl.textContent = 'Sin conexión a internet';
+        }
+      }
+
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+
+      // Check initial status
+      updateStatus();
+    </script>
+  </body>
+</html>
