@@ -48,3 +48,4 @@ agent-icloud/agent-state.json
 # Service worker
 public/sw.js
 public/workbox-*.js
+.env.vercel
