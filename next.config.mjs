@@ -1,18 +1,16 @@
-import type { NextConfig } from 'next';
-
-const config: NextConfig = {
+/** @type {import('next').NextConfig} */
+const config = {
   reactStrictMode: true,
   images: {
     unoptimized: true,
   },
 };
 
-let exportedConfig: NextConfig = config;
+let exportedConfig = config;
 
 try {
-  // Serwist PWA wrapper — types vary by version, use dynamic import
   const { default: withSerwist } = await import('@serwist/next');
-  exportedConfig = (withSerwist as Function)({
+  exportedConfig = withSerwist({
     swSrc: 'src/sw.ts',
     swDest: 'public/sw.js',
   })(config);
