@@ -147,9 +147,11 @@ export const libraryService = {
       readingStatus: 'not_started' as const,
       currentProgressPercent: 0,
       coverUrl: coverUrl || null,
-      language: metadata.language || 'es',
+      language: (metadata.language || 'es').slice(0, 10),
       publisher: metadata.publisher || null,
-      publishedDate: metadata.publishedDate || null,
+      publishedDate: metadata.publishedDate
+        ? metadata.publishedDate.slice(0, 20)  // varchar(20) — trim ISO datetimes
+        : null,
       isbn: metadata.isbn || null,
       description: metadata.description || null,
       tags: [] as string[],
