@@ -4,8 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { setupSchema } from '@/lib/validation/auth';
-import { ZodError } from 'zod';
+import { z } from 'zod';
+
+const infoSchema = z.object({
+  email: z.string().email('Email inválido'),
+  displayName: z.string().min(1, 'El nombre es obligatorio').max(255),
+});
+
+const pinSchema = z.object({
+  pin: z.string().length(6, 'El PIN debe tener 6 dígitos').regex(/^\d+$/, 'Solo dígitos'),
+  pinConfirm: z.string().length(6, 'El PIN debe tener 6 dígitos'),
+}).refine((d) => d.pin === d.pinConfirm, {
+  message: 'Los PINs no coinciden',
+  path: ['pinConfirm'],
+});
 
 export function SetupForm(): React.ReactElement {
   const router = useRouter();
@@ -17,41 +29,23 @@ export function SetupForm(): React.ReactElement {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'info' | 'pin' | 'passkey'>('info');
+  const [step, setStep] = useState<'info' | 'pin'>('info');
 
-  const handleInputChange = (field: string, value: string): void => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: '',
-      }));
-    }
+  const handleChange = (field: string, value: string): void => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
-  const handleNextStep = async (): Promise<void> => {
+  const handleNextStep = (): void => {
     try {
-      setupSchema.parse(formData);
-
-      // In a real implementation:
-      // 1. Create user account
-      // 2. Store hashed PIN
-      // 3. Initialize modules
-      // 4. Proceed to passkey registration
-
-      setStep('passkey');
+      infoSchema.parse({ email: formData.email, displayName: formData.displayName });
+      setErrors({});
+      setStep('pin');
     } catch (err) {
-      if (err instanceof ZodError) {
+      if (err instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        err.errors.forEach((error) => {
-          const path = error.path[0];
-          if (path) {
-            newErrors[path as string] = error.message;
-          }
+        err.errors.forEach((e) => {
+          if (e.path[0]) newErrors[e.path[0] as string] = e.message;
         });
         setErrors(newErrors);
       }
@@ -59,20 +53,43 @@ export function SetupForm(): React.ReactElement {
   };
 
   const handleRegister = async (): Promise<void> => {
-    setIsLoading(true);
     try {
-      // In a real implementation:
-      // 1. Register passkey
-      // 2. Create session
-      // 3. Redirect to dashboard
+      pinSchema.parse({ pin: formData.pin, pinConfirm: formData.pinConfirm });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        err.errors.forEach((e) => {
+          if (e.path[0]) newErrors[e.path[0] as string] = e.message;
+        });
+        setErrors(newErrors);
+        return;
+      }
+    }
 
-      // Simulating successful registration
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Registration error:', error);
-      setErrors({
-        submit: 'Error during registration. Please try again.',
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const res = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          displayName: formData.displayName,
+          pin: formData.pin,
+        }),
       });
+
+      const data = await res.json() as { error?: string };
+
+      if (!res.ok) {
+        setErrors({ submit: data.error ?? 'Error al registrar. Inténtalo de nuevo.' });
+        return;
+      }
+
+      router.push('/dashboard');
+    } catch {
+      setErrors({ submit: 'Error de conexión. Inténtalo de nuevo.' });
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +97,6 @@ export function SetupForm(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      {/* Step 1: User Info */}
       {step === 'info' && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -91,7 +107,7 @@ export function SetupForm(): React.ReactElement {
             label="Correo electrónico"
             type="email"
             value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            onChange={(e) => handleChange('email', e.target.value)}
             placeholder="tu@email.com"
             error={errors.email}
           />
@@ -100,30 +116,25 @@ export function SetupForm(): React.ReactElement {
             label="Nombre para mostrar"
             type="text"
             value={formData.displayName}
-            onChange={(e) => handleInputChange('displayName', e.target.value)}
+            onChange={(e) => handleChange('displayName', e.target.value)}
             placeholder="Tu nombre"
             error={errors.displayName}
           />
 
-          <Button
-            onClick={handleNextStep}
-            fullWidth
-            size="lg"
-          >
+          <Button onClick={handleNextStep} fullWidth size="lg">
             Siguiente
           </Button>
         </div>
       )}
 
-      {/* Step 2: PIN Setup */}
       {step === 'pin' && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Establece tu PIN
+            Crea tu PIN
           </h3>
 
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            El PIN debe tener 6 dígitos y se usará como método de autenticación alternativo.
+            Elige un PIN de 6 dígitos para acceder a tu app.
           </p>
 
           <Input
@@ -131,9 +142,9 @@ export function SetupForm(): React.ReactElement {
             type="password"
             value={formData.pin}
             onChange={(e) =>
-              handleInputChange('pin', e.target.value.replace(/\D/g, '').slice(0, 6))
+              handleChange('pin', e.target.value.replace(/\D/g, '').slice(0, 6))
             }
-            placeholder="000000"
+            placeholder="••••••"
             error={errors.pin}
             inputMode="numeric"
           />
@@ -143,9 +154,9 @@ export function SetupForm(): React.ReactElement {
             type="password"
             value={formData.pinConfirm}
             onChange={(e) =>
-              handleInputChange('pinConfirm', e.target.value.replace(/\D/g, '').slice(0, 6))
+              handleChange('pinConfirm', e.target.value.replace(/\D/g, '').slice(0, 6))
             }
-            placeholder="000000"
+            placeholder="••••••"
             error={errors.pinConfirm}
             inputMode="numeric"
           />
@@ -157,43 +168,16 @@ export function SetupForm(): React.ReactElement {
           )}
 
           <Button
-            onClick={() => setStep('passkey')}
-            fullWidth
-            size="lg"
-          >
-            Siguiente: Passkey
-          </Button>
-        </div>
-      )}
-
-      {/* Step 3: Passkey Registration */}
-      {step === 'passkey' && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Registra tu Passkey
-          </h3>
-
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Usa tu sensor biométrico o llave de seguridad para autenticarte de forma segura.
-          </p>
-
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              El Passkey es el método de autenticación más seguro. Se almacena de forma segura en tu dispositivo.
-            </p>
-          </div>
-
-          <Button
             onClick={handleRegister}
             disabled={isLoading}
             fullWidth
             size="lg"
           >
-            {isLoading ? 'Registrando...' : 'Completar registro'}
+            {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
           </Button>
 
           <Button
-            onClick={() => setStep('pin')}
+            onClick={() => setStep('info')}
             variant="secondary"
             fullWidth
           >
