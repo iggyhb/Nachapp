@@ -91,12 +91,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      throw error;
+      console.error('Upload inner error:', errorMessage);
+      return NextResponse.json(
+        { error: `Error al subir el ebook: ${errorMessage}` },
+        { status: 500 },
+      );
     }
   } catch (error) {
-    console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Upload error:', errorMessage);
     return NextResponse.json(
-      { error: 'Error al subir el ebook' },
+      { error: `Error al subir el ebook: ${errorMessage}` },
       { status: 500 },
     );
   }

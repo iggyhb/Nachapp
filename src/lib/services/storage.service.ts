@@ -35,10 +35,12 @@ class StorageService {
 
   /**
    * Get authorization headers for Supabase API
+   * Supabase Storage requires both Authorization and apikey headers
    */
   private getHeaders(): Record<string, string> {
     return {
       Authorization: `Bearer ${this.config.serviceRoleKey}`,
+      apikey: this.config.serviceRoleKey,
     };
   }
 
