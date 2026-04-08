@@ -279,6 +279,11 @@ export async function getLiturgyHistory(
       liturgicalSeason: e.liturgicalSeason || undefined,
       liturgicalColor: e.liturgicalColor || undefined,
       feastName: e.feastName || undefined,
+      readings: e.readingsJson || {
+        firstReading: { reference: '', title: '', text: '' },
+        psalm: { reference: '', title: '', text: '' },
+        gospel: { reference: '', title: '', text: '' },
+      },
       summaryText: e.summaryText || undefined,
       reflectionText: e.reflectionText || undefined,
       practicalPoint: e.practicalPoint || undefined,
