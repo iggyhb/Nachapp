@@ -148,11 +148,14 @@ export const libraryService = {
       currentProgressPercent: 0,
       coverUrl: coverUrl || null,
       language: (metadata.language || 'es').slice(0, 10),
-      publisher: metadata.publisher || null,
+      publisher: metadata.publisher ? metadata.publisher.slice(0, 255) : null,
       publishedDate: metadata.publishedDate
         ? metadata.publishedDate.slice(0, 20)  // varchar(20) — trim ISO datetimes
         : null,
-      isbn: metadata.isbn || null,
+      // Strip URN prefix (urn:isbn:978-...) and cap at 30 chars
+      isbn: metadata.isbn
+        ? metadata.isbn.replace(/^urn:isbn:/i, '').slice(0, 30)
+        : null,
       description: metadata.description || null,
       tags: [] as string[],
       metadataJson: metadata.rawMetadata,

@@ -1,47 +1,54 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Upload, X, FileText } from 'lucide-react';
-import { formatFileSize, formatMimeType } from '@/lib/ebook-utils';
+import { Upload } from 'lucide-react';
 
 interface UploadDropzoneProps {
-  onFileSelected: (file: File) => void;
-  selectedFile: File | null;
+  onFilesSelected: (files: File[]) => void;
   maxSizeMB?: number;
-  accept?: string[];
+  disabled?: boolean;
+}
+
+function isAllowedFile(file: File): boolean {
+  const ext = file.name.toLowerCase().split('.').pop();
+  return ext === 'epub' || ext === 'pdf' ||
+    file.type === 'application/epub+zip' ||
+    file.type === 'application/pdf';
 }
 
 export function UploadDropzone({
-  onFileSelected,
-  selectedFile,
+  onFilesSelected,
   maxSizeMB = 50,
-  accept = ['application/epub+zip', 'application/pdf'],
+  disabled = false,
 }: UploadDropzoneProps): React.ReactElement {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): boolean => {
+  const processFiles = (fileList: FileList | File[]): void => {
     setError(null);
-
-    if (!accept.includes(file.type)) {
-      setError('Solo se aceptan archivos EPUB o PDF');
-      return false;
-    }
-
     const maxBytes = maxSizeMB * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setError(`El archivo es demasiado grande. Máximo ${maxSizeMB}MB`);
-      return false;
-    }
+    const valid: File[] = [];
+    const errors: string[] = [];
 
-    return true;
+    Array.from(fileList).forEach((file) => {
+      if (!isAllowedFile(file)) {
+        errors.push(`"${file.name}" no es EPUB ni PDF`);
+      } else if (file.size > maxBytes) {
+        errors.push(`"${file.name}" supera los ${maxSizeMB}MB`);
+      } else {
+        valid.push(file);
+      }
+    });
+
+    if (errors.length > 0) setError(errors.join(' · '));
+    if (valid.length > 0) onFilesSelected(valid);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragOver(true);
+    if (!disabled) setIsDragOver(true);
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>): void => {
@@ -54,64 +61,15 @@ export function UploadDropzone({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (validateFile(file)) {
-        onFileSelected(file);
-      }
-    }
+    if (!disabled) processFiles(e.dataTransfer.files);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const files = e.currentTarget.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (validateFile(file)) {
-        onFileSelected(file);
-      }
+    if (e.currentTarget.files && e.currentTarget.files.length > 0) {
+      processFiles(e.currentTarget.files);
+      e.currentTarget.value = '';
     }
   };
-
-  const handleRemoveFile = (): void => {
-    onFileSelected(null as any);
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleClick = (): void => {
-    fileInputRef.current?.click();
-  };
-
-  if (selectedFile) {
-    return (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {formatFileSize(selectedFile.size)} • {formatMimeType(selectedFile.type)}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleRemoveFile}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Eliminar archivo"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full">
@@ -119,42 +77,40 @@ export function UploadDropzone({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={handleClick}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragOver
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+        onClick={() => !disabled && fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700'
+            : isDragOver
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-copy'
+            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer'
         }`}
       >
         <input
           ref={fileInputRef}
           type="file"
           accept=".epub,.pdf,application/epub+zip,application/pdf"
+          multiple
           onChange={handleFileInputChange}
           className="hidden"
           aria-hidden="true"
+          disabled={disabled}
         />
-
         <div className="flex flex-col items-center gap-3">
-          <div className={isDragOver ? 'text-blue-500' : 'text-gray-400'}>
-            <Upload className="w-10 h-10 mx-auto" />
-          </div>
+          <Upload className={`w-10 h-10 mx-auto ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
           <div>
             <p className="font-medium text-gray-900 dark:text-white">
-              Arrastra tu ebook aquí
+              {isDragOver ? 'Suelta los archivos aquí' : 'Arrastra uno o varios ebooks'}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               o pulsa para seleccionar
             </p>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            EPUB o PDF, máximo {maxSizeMB}MB
-          </p>
+          <p className="text-xs text-gray-500">EPUB o PDF · máximo {maxSizeMB}MB por archivo</p>
         </div>
       </div>
-
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 mt-3 text-center">{error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>
       )}
     </div>
   );
