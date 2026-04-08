@@ -2,8 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { libraryService } from '@/lib/services/library.service';
 
-const ALLOWED_MIME_TYPES = ['application/epub+zip', 'application/pdf'];
+const ALLOWED_MIME_TYPES = [
+  'application/epub+zip',
+  'application/pdf',
+  'application/octet-stream', // fallback for browsers that don't recognize .epub
+  'application/x-epub+zip',
+];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+function isAllowedFile(file: File): boolean {
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (ext === 'epub' || ext === 'pdf') return true;
+  return ALLOWED_MIME_TYPES.includes(file.type);
+}
+
+function getEffectiveMimeType(file: File): string {
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (ext === 'epub') return 'application/epub+zip';
+  if (ext === 'pdf') return 'application/pdf';
+  return file.type;
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -16,7 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Parsear form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const titleOverride = formData.get('titleOverride') as string | null;
+    const titleOverride = (formData.get('titleOverride') ?? formData.get('title')) as string | null;
 
     // Validar presencia de archivo
     if (!file) {
@@ -26,11 +44,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Validar tipo de archivo
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    // Validar tipo de archivo (por MIME o extensión)
+    if (!isAllowedFile(file)) {
       return NextResponse.json(
         {
-          error: `Invalid file type. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`,
+          error: 'Formato no válido. Solo se aceptan archivos EPUB y PDF.',
         },
         { status: 400 },
       );
@@ -56,7 +74,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         file: {
           buffer,
           originalFilename: file.name,
-          mimeType: file.type,
+          mimeType: getEffectiveMimeType(file),
           size: file.size,
         },
       });

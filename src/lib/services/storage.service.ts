@@ -43,6 +43,35 @@ class StorageService {
   }
 
   /**
+   * Ensure a bucket exists, create it if not
+   */
+  private async ensureBucket(bucket: string): Promise<void> {
+    const checkUrl = `${this.config.supabaseUrl}/storage/v1/bucket/${bucket}`;
+    const checkRes = await fetch(checkUrl, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (checkRes.status === 404) {
+      // Bucket doesn't exist, create it
+      const createUrl = `${this.config.supabaseUrl}/storage/v1/bucket`;
+      const createRes = await fetch(createUrl, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+      });
+
+      if (!createRes.ok) {
+        const err = await createRes.text();
+        throw new Error(`Failed to create bucket '${bucket}': ${err}`);
+      }
+    }
+  }
+
+  /**
    * Upload file to Supabase Storage
    * @param bucket Bucket name
    * @param path Storage path (including filename)
@@ -56,13 +85,17 @@ class StorageService {
     file: Buffer,
     contentType: string,
   ): Promise<string> {
+    // Ensure bucket exists before uploading
+    await this.ensureBucket(bucket);
+
     const url = `${this.config.supabaseUrl}/storage/v1/object/${bucket}/${path}`;
 
     const response = await fetch(url, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         ...this.getHeaders(),
         'Content-Type': contentType,
+        'x-upsert': 'true',
       },
       body: file as unknown as BodyInit,
     });

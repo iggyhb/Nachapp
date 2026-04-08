@@ -18,6 +18,12 @@ export interface LiturgyEntry {
   liturgicalSeason?: string;
   liturgicalColor?: string;
   feastName?: string;
+  readings: {
+    firstReading: { reference: string; title: string; text: string };
+    psalm: { reference: string; title: string; text: string };
+    secondReading?: { reference: string; title: string; text: string };
+    gospel: { reference: string; title: string; text: string };
+  };
   summaryText?: string;
   reflectionText?: string;
   practicalPoint?: string;
@@ -118,6 +124,11 @@ export async function getDailyLiturgy(
     liturgicalSeason: entry.liturgicalSeason || undefined,
     liturgicalColor: entry.liturgicalColor || undefined,
     feastName: entry.feastName || undefined,
+    readings: entry.readingsJson || {
+      firstReading: { reference: '', title: '', text: '' },
+      psalm: { reference: '', title: '', text: '' },
+      gospel: { reference: '', title: '', text: '' },
+    },
     summaryText: entry.summaryText || undefined,
     reflectionText: entry.reflectionText || undefined,
     practicalPoint: entry.practicalPoint || undefined,
@@ -173,6 +184,11 @@ export async function getLiturgyEntry(
     liturgicalSeason: entry.liturgicalSeason || undefined,
     liturgicalColor: entry.liturgicalColor || undefined,
     feastName: entry.feastName || undefined,
+    readings: entry.readingsJson || {
+      firstReading: { reference: '', title: '', text: '' },
+      psalm: { reference: '', title: '', text: '' },
+      gospel: { reference: '', title: '', text: '' },
+    },
     summaryText: entry.summaryText || undefined,
     reflectionText: entry.reflectionText || undefined,
     practicalPoint: entry.practicalPoint || undefined,

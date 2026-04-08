@@ -8,8 +8,6 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { CategoryButton } from '@/components/practice/CategoryButton';
 import { QuickLogModal } from '@/components/practice/QuickLogModal';
 import { StreakDisplay } from '@/components/practice/StreakDisplay';
-import { WeekDots } from '@/components/practice/WeekDots';
-import { SessionCard } from '@/components/practice/SessionCard';
 
 interface Category {
   id: string;
@@ -26,30 +24,17 @@ interface Exercise {
   categoryId: string;
 }
 
-interface Session {
-  id: string;
-  categoryId: string;
-  categoryName: string;
-  categoryColor: string;
-  categoryIcon: string;
-  durationMinutes: number;
-  mood?: string;
-  effort?: string;
-  notes?: string;
-  createdAt: Date;
-}
-
 interface StatsData {
-  streak: {
-    currentStreak: number;
-    longestStreak: number;
-    isActiveToday: boolean;
-  };
-  today: {
-    totalMinutes: number;
-    sessions: Session[];
-    sessionCount: number;
-  };
+  currentStreak: number;
+  longestStreak: number;
+  isActiveToday: boolean;
+  totalMinutes: number;
+  totalSessions: number;
+  totalCategories: number;
+  weekSummary: WeekData | null;
+  categoryStats: unknown[];
+  topCategories: unknown[];
+  monthlyTrend: unknown[];
 }
 
 interface WeekData {
@@ -58,16 +43,13 @@ interface WeekData {
   totalMinutes: number;
   totalSessions: number;
   daysActive: number;
-  dayActivities: Array<{
-    date: string;
-    minutes: number;
-    hasActivity: boolean;
-  }>;
-  comparison: {
+  categoriesUsed: string[];
+  averageSessionMinutes: number;
+  comparedToPreviousWeek: {
     minutesDiff: number;
     sessionsDiff: number;
     trend: 'up' | 'down' | 'stable';
-  };
+  } | null;
 }
 
 export default function PracticePage(): React.ReactElement {
@@ -128,22 +110,6 @@ export default function PracticePage(): React.ReactElement {
     }
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('¿Eliminar esta sesión?')) return;
-
-    try {
-      const res = await fetch(`/api/practices/sessions/${sessionId}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        handleQuickLog();
-      }
-    } catch (error) {
-      console.error('Error deleting session:', error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -152,7 +118,8 @@ export default function PracticePage(): React.ReactElement {
     );
   }
 
-  const trendIcon = weekData?.comparison.trend === 'up' ? '↑' : weekData?.comparison.trend === 'down' ? '↓' : '→';
+  const trend = weekData?.comparedToPreviousWeek?.trend;
+  const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 pb-24">
@@ -204,38 +171,10 @@ export default function PracticePage(): React.ReactElement {
         {/* Streak Display */}
         {stats && (
           <StreakDisplay
-            currentStreak={stats.streak.currentStreak}
-            longestStreak={stats.streak.longestStreak}
-            isActiveToday={stats.streak.isActiveToday}
+            currentStreak={stats.currentStreak}
+            longestStreak={stats.longestStreak}
+            isActiveToday={stats.isActiveToday}
           />
-        )}
-
-        {/* Today's Activity */}
-        {stats && stats.today.sessionCount > 0 && (
-          <Card>
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white">
-                Hoy: {stats.today.totalMinutes} minutos
-              </h3>
-            </div>
-            <div className="p-4">
-              {stats.today.sessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  id={session.id}
-                  categoryName={session.categoryName}
-                  categoryColor={session.categoryColor}
-                  categoryIcon={session.categoryIcon}
-                  durationMinutes={session.durationMinutes}
-                  mood={session.mood}
-                  effort={session.effort}
-                  notes={session.notes}
-                  createdAt={session.createdAt}
-                  onDelete={handleDeleteSession}
-                />
-              ))}
-            </div>
-          </Card>
         )}
 
         {/* Weekly Summary */}
@@ -250,21 +189,20 @@ export default function PracticePage(): React.ReactElement {
               </p>
             </div>
             <div className="p-4">
-              <WeekDots
-                days={weekData.dayActivities.map((d) => ({
-                  date: d.date,
-                  hasActivity: d.hasActivity,
-                  minutes: d.minutes,
-                }))}
-              />
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                <p>
-                  {trendIcon} {weekData.comparison.trend === 'up' ? 'Mejora' : weekData.comparison.trend === 'down' ? 'Reducción' : 'Similar'} vs semana anterior:{' '}
-                  <span className={weekData.comparison.minutesDiff > 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'}>
-                    {Math.abs(weekData.comparison.minutesDiff)}m
-                  </span>
-                </p>
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>Media: {weekData.averageSessionMinutes}m por sesión</span>
+                <span>{weekData.categoriesUsed.length} categorías</span>
               </div>
+              {weekData.comparedToPreviousWeek && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                  <p>
+                    {trendIcon} {trend === 'up' ? 'Mejora' : trend === 'down' ? 'Reducción' : 'Similar'} vs semana anterior:{' '}
+                    <span className={weekData.comparedToPreviousWeek.minutesDiff > 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'}>
+                      {Math.abs(weekData.comparedToPreviousWeek.minutesDiff)}m
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
         )}
