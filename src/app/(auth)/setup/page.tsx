@@ -9,7 +9,7 @@ export default function SetupPage(): React.ReactElement {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Mi App Personal
+            Nachapp
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Configuración inicial

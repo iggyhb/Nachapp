@@ -1,6 +1,6 @@
 {
-  "name": "Mi App Personal",
-  "short_name": "Mi App",
+  "name": "Nachapp",
+  "short_name": "Nachapp",
   "description": "Aplicación personal para prácticas espirituales y crecimiento",
   "start_url": "/",
   "scope": "/",

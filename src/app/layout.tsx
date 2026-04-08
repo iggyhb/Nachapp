@@ -5,7 +5,7 @@ import '@/app/globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Mi App Personal',
+  title: 'Nachapp',
   description: 'Personal app for spiritual practices and growth',
   manifest: '/manifest.json',
   keywords: ['liturgy', 'prayer', 'spiritual', 'practices'],
@@ -40,7 +40,7 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Mi App Personal" />
+        <meta name="apple-mobile-web-app-title" content="Nachapp" />
       </head>
       <body className={`${inter.className} bg-white dark:bg-gray-900 text-gray-900 dark:text-white`}>
         {children}

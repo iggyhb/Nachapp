@@ -1,75 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyPin, checkLockout } from '@/lib/auth/pin';
+import { compare } from 'bcryptjs';
+import { db } from '@/lib/db/client';
+import { users, pinCredentials } from '@/lib/db/schema';
 import { createSession } from '@/lib/auth/session';
+import { eq } from 'drizzle-orm';
 
 const requestSchema = z.object({
   pin: z.string().length(6).regex(/^\d+$/),
 });
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
 
-export async function POST(
-  request: NextRequest,
-): Promise<NextResponse<unknown>> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body: unknown = await request.json();
-    const validatedBody = requestSchema.parse(body);
+    const { pin } = requestSchema.parse(body);
 
-    // In a real implementation:
-    // 1. Get the user's PIN credential from the database
-    // 2. Check for lockout (too many failed attempts)
-    // 3. Verify the PIN against the stored hash
-    // 4. Reset failure counter on success
+    // Get the only user (single-user app)
+    const userRows = await db
+      .select({ id: users.id, isActive: users.isActive })
+      .from(users)
+      .limit(1);
 
-    const isLockedOut = await checkLockout('user-id-from-context');
-    if (isLockedOut) {
+    if (userRows.length === 0) {
+      return NextResponse.json({ error: 'No hay cuenta registrada' }, { status: 401 });
+    }
+
+    const user = userRows[0];
+
+    if (!user.isActive) {
+      return NextResponse.json({ error: 'Cuenta desactivada' }, { status: 401 });
+    }
+
+    // Get PIN credential
+    const pinRows = await db
+      .select({
+        pinHash: pinCredentials.pinHash,
+        failedAttempts: pinCredentials.failedAttempts,
+        lockedUntil: pinCredentials.lockedUntil,
+      })
+      .from(pinCredentials)
+      .where(eq(pinCredentials.userId, user.id))
+      .limit(1);
+
+    if (pinRows.length === 0) {
+      return NextResponse.json({ error: 'PIN no configurado' }, { status: 401 });
+    }
+
+    const cred = pinRows[0];
+
+    // Check lockout
+    if (cred.lockedUntil && cred.lockedUntil > new Date()) {
       return NextResponse.json(
-        { error: 'Account locked due to too many failed attempts' },
+        { error: 'Cuenta bloqueada temporalmente. Intenta más tarde.' },
         { status: 429 },
       );
     }
 
-    // This would be the stored PIN hash from the database
-    const storedPINHash = '$2b$12$...'; // bcrypt hash
-    const isPinValid = await verifyPin(validatedBody.pin, storedPINHash);
+    // Verify PIN
+    const isValid = await compare(pin, cred.pinHash);
 
-    if (!isPinValid) {
-      return NextResponse.json(
-        { error: 'Invalid PIN' },
-        { status: 401 },
-      );
+    if (!isValid) {
+      const newAttempts = (cred.failedAttempts ?? 0) + 1;
+      const lockedUntil =
+        newAttempts >= MAX_ATTEMPTS
+          ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+          : null;
+
+      await db
+        .update(pinCredentials)
+        .set({ failedAttempts: newAttempts, lockedUntil })
+        .where(eq(pinCredentials.userId, user.id));
+
+      if (lockedUntil) {
+        return NextResponse.json(
+          { error: `Demasiados intentos. Bloqueado ${LOCKOUT_MINUTES} minutos.` },
+          { status: 429 },
+        );
+      }
+
+      return NextResponse.json({ error: 'PIN incorrecto' }, { status: 401 });
     }
 
-    // Create session and return token
-    const userId = 'user-id-from-db';
-    const token = await createSession(userId);
+    // Reset failed attempts on success
+    await db
+      .update(pinCredentials)
+      .set({ failedAttempts: 0, lockedUntil: null })
+      .where(eq(pinCredentials.userId, user.id));
 
-    const response = NextResponse.json({
-      verified: true,
-      token,
-    });
+    // Update last login
+    await db
+      .update(users)
+      .set({ lastLogin: new Date() })
+      .where(eq(users.id, user.id));
 
+    // Create session
+    const token = await createSession(user.id);
+
+    const response = NextResponse.json({ verified: true });
     response.cookies.set('session', token, {
       httpOnly: true,
       secure: process.env.SESSION_COOKIE_SECURE === 'true',
       sameSite: 'lax',
-      maxAge: parseInt(process.env.SESSION_MAX_AGE || '604800', 10),
+      maxAge: parseInt(process.env.SESSION_MAX_AGE ?? '604800', 10),
       path: '/',
     });
 
     return response;
   } catch (error) {
-    console.error('PIN verification error:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid PIN format' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Formato de PIN inválido' }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: 'PIN verification failed' },
-      { status: 500 },
-    );
+    console.error('[PIN verify] Error:', error);
+    return NextResponse.json({ error: 'Error al verificar el PIN' }, { status: 500 });
   }
 }
 
