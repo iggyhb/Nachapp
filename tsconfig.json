@@ -40,6 +40,9 @@
   ],
   "exclude": [
     "node_modules",
-    "agent-icloud"
+    "agent-icloud",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
   ]
 }

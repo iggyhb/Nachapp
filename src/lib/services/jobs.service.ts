@@ -178,6 +178,6 @@ export const jobsService = {
           : eq(jobRuns.status, 'completed'),
       );
 
-    return result.rowCount || 0;
+    return result.count || 0;
   },
 };

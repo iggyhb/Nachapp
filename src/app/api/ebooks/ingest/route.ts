@@ -7,8 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { libraryService } from '@/lib/services/library.service';
-import { db } from '@/lib/db/client';
-import { users } from '@/lib/db/schema';
 
 const ALLOWED_MIME_TYPES = ['application/epub+zip', 'application/pdf'];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB

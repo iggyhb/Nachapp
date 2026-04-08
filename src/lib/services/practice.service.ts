@@ -189,7 +189,7 @@ export async function deleteCategory(categoryId: string, userId: string): Promis
       ),
     );
 
-  if (result.rowCount === 0) {
+  if (result.count === 0) {
     throw new Error('Category not found');
   }
 }
@@ -320,7 +320,7 @@ export async function deleteExercise(exerciseId: string, userId: string): Promis
       ),
     );
 
-  if (result.rowCount === 0) {
+  if (result.count === 0) {
     throw new Error('Exercise not found');
   }
 }
@@ -452,7 +452,7 @@ export async function deleteSession(sessionId: string, userId: string): Promise<
       ),
     );
 
-  if (result.rowCount === 0) {
+  if (result.count === 0) {
     throw new Error('Session not found');
   }
 }
