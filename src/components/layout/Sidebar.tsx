@@ -8,7 +8,8 @@ import {
   Zap,
   MessageCircle,
   Settings,
-  BarChart3,
+  Church,
+  Library,
   X,
 } from 'lucide-react';
 
@@ -25,12 +26,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: Home },
-  { label: 'Lecturas', href: '/readings', icon: BookOpen },
-  { label: 'Prácticas', href: '/practices', icon: Zap },
-  { label: 'Chat', href: '/chat', icon: MessageCircle },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'Configuración', href: '/settings', icon: Settings },
+  { label: 'Dashboard',   href: '/dashboard', icon: Home },
+  { label: 'Liturgia',    href: '/liturgy',   icon: Church },
+  { label: 'Biblioteca',  href: '/library',   icon: Library },
+  { label: 'Lecturas',    href: '/reading',   icon: BookOpen },
+  { label: 'Prácticas',   href: '/practice',  icon: Zap },
+  { label: 'Chat',        href: '/chat',      icon: MessageCircle },
+  { label: 'Ajustes',     href: '/settings',  icon: Settings },
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps): React.ReactElement {
